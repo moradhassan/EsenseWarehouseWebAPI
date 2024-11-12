@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
@@ -83,7 +84,7 @@ namespace WarehouseWebAPI.Controllers
             }
             else
             {
-               return StatusCode(StatusCodes.Status403Forbidden);
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
         }
 
@@ -139,6 +140,38 @@ namespace WarehouseWebAPI.Controllers
         public async Task<IActionResult> GetAllUsers()
         {
             return Ok(await accountService.getAllUsers());
+        }
+
+        [HttpGet]
+        [Route("DeleteUser")]
+        public async Task<IActionResult> DeleteUser([FromQuery] string username)
+        {
+            var result = await accountService.DeleteUserByName(username);
+            if (result)
+                return Ok(new { Message = "User Deleted Successfully" });
+
+            else return BadRequest(new { Message = "Something Wrong Happened" });
+
+        }
+
+        [HttpGet]
+        [Route("GetUserByName")]
+
+        public async Task<IActionResult> GetUser([FromQuery] string username)
+        {
+            return Ok(accountService.getUser(username));
+        }
+
+        [HttpPut]
+
+        public async Task<IActionResult> UpdateUser(ApplicationUserDto userDTO)
+        {
+            var result = await accountService.UpdateUser(userDTO);
+            if (result.Succeeded)
+            {
+                return Ok();
+            }
+            return StatusCode((int)HttpStatusCode.BadRequest, result.Errors);
         }
     }
 }

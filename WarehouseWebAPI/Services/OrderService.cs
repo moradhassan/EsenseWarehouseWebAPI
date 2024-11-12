@@ -85,6 +85,7 @@ namespace WarehouseWebAPI.Services
             var product = await context.Products.FirstAsync(p => p.ProductId == orderDTO.ProductId);
             double price = product.Price;
             orderDTO.TotalPrice = price*orderDTO.Quantity;
+            
 
             Order order = mapper.Map<Order>(orderDTO);
             await generic.Update(order);

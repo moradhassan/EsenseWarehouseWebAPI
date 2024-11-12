@@ -92,13 +92,12 @@ namespace WarehouseWebAPI.Services
             return result;
         }
 
-      
+
 
         public async Task<List<ApplicationUserDto>> getAllUsers()
         {
-            var allUsers = await userManager.Users.ToListAsync();
+            var allUsers = await userManager.Users.Include(u => u.warehouse).ToListAsync();
             List<ApplicationUserDto> users = new List<ApplicationUserDto>();
-            
             foreach (var user in allUsers)
             {
                 users.Add(new ApplicationUserDto()
@@ -107,11 +106,78 @@ namespace WarehouseWebAPI.Services
                     UserName = user.UserName,
                     Email = user.Email,
                     RoleName = await userManager.GetRolesAsync(user),
-                    WarehouseId = user.WarehouseId,
+                    WarehouseId = user.WarehouseId ?? 0,
+                    WarehouseName = user?.warehouse?.Location ?? "",
                 });
             }
             return users;
         }
+
+        public async Task<ApplicationUserDto> getUser(string userName)
+        {
+            try
+            {
+                var user = await userManager.Users
+                        .Include(u => u.warehouse)
+                        .FirstOrDefaultAsync(u => u.UserName == userName);
+
+                if (user == null)
+                    return null;
+
+                return new ApplicationUserDto()
+                {
+                    Name = user.Name,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    RoleName = await userManager.GetRolesAsync(user),
+                    WarehouseId = user.WarehouseId ?? 0,
+                    WarehouseName = user?.warehouse?.Location ?? "",
+                };
+            }
+            catch (Exception e)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteUserByName(string username)
+        {
+            bool isDeleted = false;
+
+            var result = await userManager.FindByNameAsync(username);
+            if (result != null)
+            {
+                await userManager.DeleteAsync(result);
+                isDeleted = true;
+                return isDeleted;
+            }
+            return isDeleted;
+        }
+
+        public async Task<IdentityResult> UpdateUser(ApplicationUserDto userDTO)
+        {
+
+            ApplicationUser appUser = await userManager.FindByNameAsync(userDTO.UserName);
+          
+            appUser.Email = userDTO.Email;
+         
+            appUser.Name = userDTO.Name;
+            appUser.WarehouseId = userDTO.WarehouseId;
+            var updateResult = await userManager.UpdateAsync(appUser);
+
+            var newRoles = userDTO.RoleName;
+            if (newRoles != null)
+            {
+                var currentRoles = await userManager.GetRolesAsync(appUser);
+                await userManager.RemoveFromRolesAsync(appUser, currentRoles);
+                var addResult = await userManager.AddToRolesAsync(appUser, newRoles);
+            }
+
+            return updateResult;
+
+        }
+
 
     }
 }

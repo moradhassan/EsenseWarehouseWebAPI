@@ -59,7 +59,7 @@ namespace WarehouseWebAPI.Controllers
                 else
                 {
                     await service.Update(warehouseDTO);
-                    return Ok("Warehouse updated successfully");
+                    return Ok(new {Message="Warehouse Updated Successfully"});
                 }
 
             }

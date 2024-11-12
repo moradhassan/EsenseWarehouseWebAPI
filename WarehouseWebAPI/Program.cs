@@ -53,6 +53,7 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireLowercase = false;
     options.Password.RequireUppercase = false;
 
+
 });
 
 builder.Services.AddCors(opt =>

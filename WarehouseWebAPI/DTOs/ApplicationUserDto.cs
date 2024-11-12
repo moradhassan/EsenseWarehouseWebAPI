@@ -15,5 +15,6 @@ namespace WarehouseWebAPI.DTOs
         public IList<string>? RoleName { get; set; }
 
         public int? WarehouseId { get; set; }
+        public string? WarehouseName { get; set; }
     }
 }
