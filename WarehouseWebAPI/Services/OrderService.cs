@@ -12,10 +12,13 @@ namespace WarehouseWebAPI.Services
         IMapper mapper;
         WareHouseContext context;
         IGeneric<Order> generic;
-        public OrderService(IMapper _mapper, WareHouseContext _context, IGeneric<Order> _generic)
+        IProductService productService;
+
+        public OrderService(IMapper _mapper, WareHouseContext _context, IGeneric<Order> _generic, IProductService _productService)
         {
             mapper = _mapper;
             generic = _generic;
+            productService = _productService;
             context = _context;
         }
 
@@ -80,16 +83,75 @@ namespace WarehouseWebAPI.Services
             return orderDTO;
         }
 
-        public async Task Update(OrderDTO orderDTO)
-        {
-            var product = await context.Products.FirstAsync(p => p.ProductId == orderDTO.ProductId);
-            double price = product.Price;
-            orderDTO.TotalPrice = price*orderDTO.Quantity;
+        //public async Task Update(OrderDTO orderDTO)
+        //{
+        //    var product = await context.Products.FirstAsync(p => p.ProductId == orderDTO.ProductId);
+        //    double price = product.Price;
+        //    orderDTO.TotalPrice = price*orderDTO.Quantity;
             
 
-            Order order = mapper.Map<Order>(orderDTO);
-            await generic.Update(order);
+        //    Order order = mapper.Map<Order>(orderDTO);
+        //    await generic.Update(order);
 
+        //}
+        public async Task<bool> Update(OrderDTO orderDTO)
+        {
+            bool isSuccess = true;
+            var product = await productService.Load(orderDTO.ProductId);
+            Order order = await context.Orders.FindAsync(orderDTO.OrderId);
+            int stockDifference = orderDTO.Quantity - order.Quantity;
+            if (product != null)
+            {
+                if (stockDifference == 0)
+                {
+                    if (orderDTO.Status == "Cancelled")
+                    {
+                        product.Stock += orderDTO.Quantity;
+                        order.Quantity = 0;
+
+                        order = mapper.Map<Order>(orderDTO);
+                        await generic.Update(order);
+                        await productService.Update(product);
+                    }
+                    else
+                    {
+                        order = mapper.Map<Order>(orderDTO);
+                        await generic.Update(order);
+                        await productService.Update(product);
+                    }
+                }
+                else if (stockDifference < 0) //product.Stock > 0 && orderDTO.Quantity <= product.Stock
+                {
+                    stockDifference *= -1;
+
+                    product.Stock += stockDifference;
+
+                    order = mapper.Map<Order>(orderDTO);
+                    await generic.Update(order);
+                    await productService.Update(product);
+                }
+                else if (stockDifference > 0)
+                {
+                    if (product.Stock > 0 && orderDTO.Quantity <= product.Stock)
+                    {
+
+                        product.Stock -= stockDifference;
+
+                        order = mapper.Map<Order>(orderDTO);
+                        await generic.Update(order);
+                        await productService.Update(product);
+                    }
+                    else
+                    {
+                        isSuccess = false;
+                    }
+                }
+            }
+            else
+            {
+                isSuccess = false;
+            }
+            return isSuccess;
         }
 
         public async Task<OrderDTO> Load(int Id)
@@ -102,9 +164,17 @@ namespace WarehouseWebAPI.Services
         }
 
 
+        //public async Task Delete(int Id)
+        //{
+        //    await generic.Delete(Id);
+        //}
         public async Task Delete(int Id)
         {
+            Order order = await context.Orders.FindAsync(Id);
+            var product = await productService.Load(order.ProductId);
+            product.Stock += order.Quantity;
             await generic.Delete(Id);
+            await productService.Update(product);
         }
 
 

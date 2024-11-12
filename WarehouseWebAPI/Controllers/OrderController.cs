@@ -68,7 +68,7 @@ namespace WarehouseWebAPI.Controllers
                   }
                   else
                   {
-                    await service.Update(orderDTO);
+                   if( await service.Update(orderDTO)==true);
                     return Ok(new {Message="Order Updated Successfully"});
                   }
 
